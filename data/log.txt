@@ -1,0 +1,3 @@
+loading files, we have 31886 lines in total
+we have 100 stocks in total
+we have 202 insts in total
