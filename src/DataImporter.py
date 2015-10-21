@@ -9,6 +9,6 @@ class  Record:
 		self.inscode = str(inscode)
 		self.biddercode = str(biddercode)
 		self.price_normal = float(price_normal)
-		self.shares = int(shares)
+		self.shares = float(shares)
 		self.policy_flag = int(policy_flag)
 

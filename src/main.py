@@ -6,16 +6,20 @@ from Utils import Logger
 from DataImporter import Record
 from Utils import cosine,cosineOnlyParticipation
 logfile = '../data/log.txt'
-datafile  = '../data/sample_data.csv'
-ROLLINGWINDOW = 20
-STEPSIZE = 10
+datafile  = '../data/biddata.full.csv'
+ROLLINGWINDOW = 200
+STEPSIZE = 50
 RANKINGOPTION = 'RANKING'
 
 CLUSTER_SIMILAR_CUTOFF = 0.9
+POLICY_CHOICE_OPTION = 0
 
-BINARY_DISTANCE_FILE = '../data/distance/binary.csv'
-HIGH_PRICE_DISTANCE_FILE = '../data/distance/price_high.csv'
-LOW_PRICE_DISTANCE_FILE = '../data/distance/price_low.csv'
+
+BINARY_DISTANCE_FILE = '../data/distance/binary_policy_'+str(POLICY_CHOICE_OPTION)+'.csv'
+HIGH_PRICE_DISTANCE_FILE = '../data/distance/price_high_policy_'+str(POLICY_CHOICE_OPTION)+'.csv'
+LOW_PRICE_DISTANCE_FILE = '../data/distance/price_low_policy_'+str(POLICY_CHOICE_OPTION)+'.csv'
+
+
 
 log = Logger(logfile)
 
@@ -33,7 +37,10 @@ allinst = []
 for l in alllines:
 	segs = l.strip().split(',')
 	if len(segs) == 7:
-		allrecords.append(Record(segs[0],segs[1],segs[2],segs[3],segs[4],segs[5],segs[6]))
+		#Record stkcd,dealseq,inscode,biddercode,price_normal,shares,policy_flag
+		#          0      1      2        3         4            5      6
+		
+		allrecords.append(Record(segs[6],segs[5],segs[1],segs[2],segs[4],segs[0],segs[3]))
 		if segs[0] in orderedStkid:
 			pass
 		else:
@@ -54,12 +61,12 @@ for r in allrecords:
 ###########################################
 
 # Binary Code (Binary Participation)
-
+log.write('computing binary distances')
 bwriter = open(BINARY_DISTANCE_FILE,'w')
 bwriter.write('INST1,INST2,cosine\n')
 
 BinaryVectors = dict()
-
+log.write('Binary matrix construction')
 for _ins in allinst:
 	temp = []
 	for _stkid in orderedStkid:
@@ -68,16 +75,20 @@ for _ins in allinst:
 		else:
 			temp.append(0)
 	BinaryVectors[_ins] = temp
-
+log.write('Binary distances calculate')
 for i in range(0,len(allinst)-1,1):
+	log.write('Binary distances calculate: processing '+str(i)+' / '+str(len(allinst)))
+
 	for j in range(i+1,len(allinst),1):
 		bwriter.write(allinst[i]+','+allinst[j]+','+str(cosine(BinaryVectors[allinst[i]],BinaryVectors[allinst[j]])))
 		bwriter.write('\n')
 bwriter.close()
 
+log.write('Binary distances rolling')
+
 
 for startIndex in range(0,len(orderedStkid),STEPSIZE):
-	
+	log.write('Binary rolling start index '+str(startIndex))
 	if startIndex + ROLLINGWINDOW > len(orderedStkid):
 		break
 	else:
@@ -91,7 +102,7 @@ for startIndex in range(0,len(orderedStkid),STEPSIZE):
 		bwriter.close()
 
 # Price Option
-
+log.write('computing price distances')
 hpwriter = open(HIGH_PRICE_DISTANCE_FILE,'w')
 hpwriter.write('INST1,INST2,cosine\n')
 
