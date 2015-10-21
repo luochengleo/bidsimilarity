@@ -178,12 +178,19 @@ for startIndex in range(0,len(orderedStkid),STEPSIZE):
 
 import networkx as nx
 
+fout = open('../data/cliques/summary.txt','w')
 G = nx.Graph()
-for l in open('../data/distance/binary.csv').readlines()[1:]:
-	segs = l.strip().split(',')
-	if len(segs) == 3:
-		weight = float(segs[2])
-		if weight > 0.9:
-			G.add_edge(segs[0],segs[1])
-for item in  nx.max_clique(G):
-	print item
+
+for f in os.listdir('../data/distance'):
+	for l in open('../data/distance/'+f).readlines()[1:]:
+		segs = l.strip().split(',')
+		if len(segs) == 3:
+			weight = float(segs[2])
+			if weight > CLUSTER_SIMILAR_CUTOFF:
+				G.add_edge(segs[0],segs[1])
+	fout.write('Distance File:' + f+'\n')
+	for item in  nx.max_clique(G):
+		fout.write(str(item))
+	fout.write('\n')
+fout.close()
+
