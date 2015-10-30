@@ -507,7 +507,19 @@ Binary rolling start index 550
 Binary rolling start index 600
 Binary rolling start index 650
 Binary rolling start index 700
-computing price distances
-Computing cliques for Distance File:.DS_Store
-Computing cliques for Distance File:binary_policy_0.csv
-Computing cliques for Dista
+Computing price distances
+Price rolling start index 0
+Price rolling start index 50
+Price rolling start index 100
+Price rolling start index 150
+Price rolling start index 200
+Price rolling start index 250
+Price rolling start index 300
+Price rolling start index 350
+Price rolling start index 400
+Price rolling start index 450
+Price rolling start index 500
+Price rolling start index 550
+Price rolling start index 600
+Price rolling start index 650
+Price rolling start index 700
