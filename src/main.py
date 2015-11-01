@@ -1,6 +1,5 @@
 # coding=utf8
 import os
-
 from collections import defaultdict
 from Utils import Logger
 from DataImporter import Record
@@ -12,8 +11,9 @@ ROLLINGWINDOW = 200
 STEPSIZE = 50
 RANKINGOPTION = 'RANKING'
 
-CLUSTER_SIMILAR_CUTOFF = 0.99
+CLUSTER_SIMILAR_CUTOFF = 0.8
 POLICY_CHOICE_OPTION = 0
+BINARY_DISTANCE_CUTOFF = 0.5
 
 BINARY_DISTANCE_FILE = '../data/distance/binary_policy_' + str(POLICY_CHOICE_OPTION) + '.csv'
 HIGH_PRICE_DISTANCE_FILE = '../data/distance/price_high_policy_' + str(POLICY_CHOICE_OPTION) + '.csv'
@@ -62,6 +62,8 @@ for r in allrecords:
 
 
 def similarity():
+
+    os.system('rm ../data/distance/*')
     ###########################################
     #       calculate similarity              #
     ###########################################
@@ -81,6 +83,7 @@ def similarity():
             else:
                 temp.append(0)
         BinaryVectors[_ins] = temp
+
     log.write('Binary distances calculate')
     for i in range(0, len(allinst) - 1, 1):
         log.write('Binary distances calculate: processing ' + str(i) + ' / ' + str(len(allinst)))
@@ -185,22 +188,40 @@ def similarity():
 #####################################
 
 def cliques():
+    os.system('rm ../data/cliques/*')
     from networkx.algorithms.clique import find_cliques
     import networkx as nx
-    G = nx.Graph()
 
     for f in os.listdir('../data/distance'):
+        G = nx.Graph()
         log.write('Computing cliques for Distance File:' + f)
         fout = open('../data/cliques/' + f + '.cliques.txt', 'w')
 
+
+        if 'price' in f:
+            accompany_filter  = defaultdict(lambda:-1.0)
+            binaryDistanceFile = f.replace('price_high','binary').replace('price_low','binary')
+            for l in open('../data/distance/'+binaryDistanceFile).readlines()[1:]:
+                _inst1,_inst2,_distance,_involved = l.strip().split(',')
+                accompany_filter[(_inst1,_inst2)] = float(_distance)
+                accompany_filter[(_inst2,_inst1)] = float(_distance)
+
+        if 'binary' in f:
+            accompany_filter  = defaultdict(lambda:1.0)
+
+        distance = defaultdict(lambda:'NULL')
         for l in open('../data/distance/' + f).readlines()[1:]:
             segs = l.strip().split(',')
             if len(segs) == 4:
                 weight = float(segs[2])
-                if weight > CLUSTER_SIMILAR_CUTOFF:
+                if (weight > CLUSTER_SIMILAR_CUTOFF) and (accompany_filter[(segs[0],segs[1])] > BINARY_DISTANCE_CUTOFF):
                     G.add_edge(segs[0], segs[1])
+                    distance[(segs[0],segs[1])] = str(weight)
+                    distance[(segs[1],segs[0])] = str(weight)
         fout.write('Distance File: ' + f + '\n')
-        fout.write('CLUSTER_SIMILAR_CUTOFF:' + str(CLUSTER_SIMILAR_CUTOFF) + '\n\n')
+        fout.write('CLUSTER_SIMILAR_CUTOFF:' + str(CLUSTER_SIMILAR_CUTOFF) + '\n')
+        fout.write('BINARY_DISTANCE_CUTOFF:' + str(BINARY_DISTANCE_CUTOFF) + '\n\n')
+
         cqs = find_cliques(G)
 
         _idx = 0
@@ -208,10 +229,15 @@ def cliques():
             _idx += 1
             fout.write('--------------- CLIQUE ' + str(_idx) + ' with ' + str(len(item)) + ' members-----------\n')
             fout.write(','.join([str(ins) for ins in item]))
-            fout.write('\n--------------------------------------------------\n')
+            fout.write("\nDistance Details:\n")
+            fout.write("INST1,INST2,DISTANCE,CORRESPONDING BINARY DISTANCE\n")
+            for i in range(0,len(item)-1,1):
+                for j in range(i+1,len(item),1):
+                    fout.write( item[i]+','+item[j]+','+distance[(item[i],item[j])]+','+str(accompany_filter[(item[i],item[j])])+'\n')
+            fout.write('\n\n--------------------------------------------------\n\n')
 
         fout.close()
 
 
 similarity()
-# cliques()
+cliques()
