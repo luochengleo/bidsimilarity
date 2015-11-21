@@ -4,15 +4,13 @@ from collections import defaultdict
 from Utils import Logger, publicElements
 from DataImporter import Record
 from Utils import cosine, cosineOnlyParticipation,mean
-
+import sys
 
 datafile = '../data/biddata.full.csv'
 ROLLINGWINDOW = 200
 STEPSIZE = 50
-
 # binary cutoff: 0.3, 0.4, 0.5, 0.6
 # cosine cutoff: 0.980, 0.9850, 0.990, 0.995
-
 CLUSTER_SIMILAR_CUTOFF = 0.980
 POLICY_CHOICE_OPTION = 0
 BINARY_DISTANCE_CUTOFF = 0.6
@@ -20,32 +18,57 @@ BINARY_DISTANCE_CUTOFF = 0.6
 RANKINGOPTION = 'RANKING'
 RESULTDIR = '../data/output'
 
-logfile = RESULTDIR+'/log.txt'
+def init_parameters(filename):
+    d = {}
+    for l in open(filename).readlines():
+        segs = l.strip().split('=')
+        if len(segs) ==2:
+            k,v = segs[0],segs[1]
+            d[k.strip()] = v.strip()
+        else:
+            print len(segs)
+    datafile = d['datafile']
+    ROLLINGWINDOW = int( d['ROLLINGWINDOW'])
+    STEPSIZE = int(d['STEPSIZE'])
+    CLUSTER_SIMILAR_CUTOFF = float(d['CLUSTER_SIMILAR_CUTOFF'])
+    POLICY_CHOICE_OPTION = int(d['POLICY_CHOICE_OPTION'])
+    BINARY_DISTANCE_CUTOFF = float(d['BINARY_DISTANCE_CUTOFF'])
+    RANKINGOPTION = d['RANKINGOPTION']
+    RESULTDIR = d['RESULTDIR']
+
+##### load parameters ########
+
+init_parameters(sys.argv[1])
+
+########   initial datapath    ############
+
+
 try:
     os.mkdir(RESULTDIR)
     os.mkdir(RESULTDIR+'/distance')
     os.mkdir(RESULTDIR+'/cliques')
-
 except:
     print 'RESULT DIR EXISTS'
 
-
+logfile = RESULTDIR+'/log.txt'
+log = Logger(logfile)
 BINARY_DISTANCE_FILE = RESULTDIR+'/distance/binary_policy_' + str(POLICY_CHOICE_OPTION) + '.csv'
 HIGH_PRICE_DISTANCE_FILE = RESULTDIR+'/distance/price_high_policy_' + str(POLICY_CHOICE_OPTION) + '.csv'
 LOW_PRICE_DISTANCE_FILE = RESULTDIR+'/distance/price_low_policy_' + str(POLICY_CHOICE_OPTION) + '.csv'
 
-log = Logger(logfile)
+#####   initial datapath ends  ############
 
-# allbids [stkcd][inscode] = [(biddercode,price_normal,shares)]
+
+#####    initial data structure ##########
 allbids = defaultdict(lambda: defaultdict(lambda: list()))
-
 alllines = open(datafile).readlines()[1:]
 log.write('loading files, we have ' + str(len(alllines)) + ' lines in total')
-
 allrecords = []
-
 orderedStkid = []
 allbidder = []
+##########################################
+
+#####    read data structure ##########
 
 for l in alllines:
     segs = l.strip().split(',')

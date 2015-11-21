@@ -1,0 +1,16 @@
+nohup python main.py ./config1 > 1.log &
+nohup python main.py ./config2 > 2.log &
+nohup python main.py ./config3 > 3.log &
+nohup python main.py ./config4 > 4.log &
+nohup python main.py ./config5 > 5.log &
+nohup python main.py ./config6 > 6.log &
+nohup python main.py ./config7 > 7.log &
+nohup python main.py ./config8 > 8.log &
+nohup python main.py ./config9 > 9.log &
+nohup python main.py ./config10 > 10.log &
+nohup python main.py ./config11 > 11.log &
+nohup python main.py ./config12 > 12.log &
+nohup python main.py ./config13 > 13.log &
+nohup python main.py ./config14 > 14.log &
+nohup python main.py ./config15 > 15.log &
+nohup python main.py ./config16 > 16.log &
