@@ -1,27 +1,42 @@
 # coding=utf8
 import os
 from collections import defaultdict
-from Utils import Logger
+from Utils import Logger, publicElements
 from DataImporter import Record
-from Utils import cosine, cosineOnlyParticipation
+from Utils import cosine, cosineOnlyParticipation,mean
 
-logfile = '../data/log.txt'
+
 datafile = '../data/biddata.full.csv'
 ROLLINGWINDOW = 200
 STEPSIZE = 50
-RANKINGOPTION = 'RANKING'
 
-CLUSTER_SIMILAR_CUTOFF = 0.8
+# binary cutoff: 0.3, 0.4, 0.5, 0.6
+# cosine cutoff: 0.980, 0.9850, 0.990, 0.995
+
+CLUSTER_SIMILAR_CUTOFF = 0.980
 POLICY_CHOICE_OPTION = 0
-BINARY_DISTANCE_CUTOFF = 0.5
+BINARY_DISTANCE_CUTOFF = 0.6
 
-BINARY_DISTANCE_FILE = '../data/distance/binary_policy_' + str(POLICY_CHOICE_OPTION) + '.csv'
-HIGH_PRICE_DISTANCE_FILE = '../data/distance/price_high_policy_' + str(POLICY_CHOICE_OPTION) + '.csv'
-LOW_PRICE_DISTANCE_FILE = '../data/distance/price_low_policy_' + str(POLICY_CHOICE_OPTION) + '.csv'
+RANKINGOPTION = 'RANKING'
+RESULTDIR = '../data/output'
+
+logfile = RESULTDIR+'/log.txt'
+try:
+    os.mkdir(RESULTDIR)
+    os.mkdir(RESULTDIR+'/distance')
+    os.mkdir(RESULTDIR+'/cliques')
+
+except:
+    print 'RESULT DIR EXISTS'
+
+
+BINARY_DISTANCE_FILE = RESULTDIR+'/distance/binary_policy_' + str(POLICY_CHOICE_OPTION) + '.csv'
+HIGH_PRICE_DISTANCE_FILE = RESULTDIR+'/distance/price_high_policy_' + str(POLICY_CHOICE_OPTION) + '.csv'
+LOW_PRICE_DISTANCE_FILE = RESULTDIR+'/distance/price_low_policy_' + str(POLICY_CHOICE_OPTION) + '.csv'
 
 log = Logger(logfile)
 
-# allprice [stkcd][inscode] = [(biddercode,price_normal,shares)]
+# allbids [stkcd][inscode] = [(biddercode,price_normal,shares)]
 allbids = defaultdict(lambda: defaultdict(lambda: list()))
 
 alllines = open(datafile).readlines()[1:]
@@ -30,7 +45,7 @@ log.write('loading files, we have ' + str(len(alllines)) + ' lines in total')
 allrecords = []
 
 orderedStkid = []
-allinst = []
+allbidder = []
 
 for l in alllines:
     segs = l.strip().split(',')
@@ -42,28 +57,28 @@ for l in alllines:
         # Record: __init__(stkcd,dealseq,inscode,biddercode,price_normal,shares,policy_flag):
         #                    6    5        1      2           4           0     3
         # data2
-        allrecords.append(Record(segs[6], segs[5], segs[1], segs[2], segs[4], segs[0], segs[3]))
-        # data1
-        # allrecords.append(Record(segs[0],segs[1],segs[2],segs[3],segs[4],segs[5],segs[6]))
-        if segs[6] in orderedStkid:
-            pass
-        else:
-            orderedStkid.append(segs[6])
-        if segs[1] in allinst:
-            pass
-        else:
-            allinst.append(segs[1])
-
+        r = Record(segs[6], segs[5], segs[1], segs[2], segs[4], segs[0], segs[3])
+        if r.policy_flag ==POLICY_CHOICE_OPTION:
+            allrecords.append(r)
+            if r.stkcd in orderedStkid:
+                pass
+            else:
+                orderedStkid.append(r.stkcd)
+            if r.biddercode in allbidder:
+                pass
+            else:
+                allbidder.append(r.biddercode)
+log.write('the policy flag is '+str(POLICY_CHOICE_OPTION))
 log.write('we have ' + str(len(orderedStkid)) + ' stocks in total')
-log.write('we have ' + str(len(allinst)) + ' insts in total')
+log.write('we have ' + str(len(allbidder)) + ' insts in total')
 
 for r in allrecords:
-    allbids[r.stkcd][r.inscode].append((r.biddercode, r.price_normal, r.shares))
+    allbids[r.stkcd][r.biddercode].append((r.biddercode, r.price_normal, r.shares))
 
 
 def similarity():
 
-    os.system('rm ../data/distance/*')
+    # os.system('del ../data/distance/*')
     ###########################################
     #       calculate similarity              #
     ###########################################
@@ -71,27 +86,27 @@ def similarity():
     # Binary Code (Binary Participation)
     log.write('computing binary distances')
     bwriter = open(BINARY_DISTANCE_FILE, 'w')
-    bwriter.write('INST1,INST2,cosine,involved items\n')
+    bwriter.write('BIDDER1,BIDDER2,cosine,involved items\n')
 
     BinaryVectors = dict()
     log.write('Binary matrix construction')
-    for _ins in allinst:
+    for _bidder in allbidder:
         temp = []
         for _stkid in orderedStkid:
-            if len(allbids[_stkid][_ins]) > 0:
+            if len(allbids[_stkid][_bidder]) > 0:
                 temp.append(1)
             else:
                 temp.append(0)
-        BinaryVectors[_ins] = temp
+        BinaryVectors[_bidder] = temp
 
     log.write('Binary distances calculate')
-    for i in range(0, len(allinst) - 1, 1):
-        log.write('Binary distances calculate: processing ' + str(i) + ' / ' + str(len(allinst)))
+    for i in range(0, len(allbidder) - 1, 1):
+        log.write('Binary distances calculate: processing ' + str(i) + ' / ' + str(len(allbidder)))
 
-        for j in range(i + 1, len(allinst), 1):
-            dist,involved = cosine(BinaryVectors[allinst[i]], BinaryVectors[allinst[j]])
+        for j in range(i + 1, len(allbidder), 1):
+            dist,involved = cosine(BinaryVectors[allbidder[i]], BinaryVectors[allbidder[j]])
             bwriter.write(
-                allinst[i] + ',' + allinst[j] + ',' + str(dist)+','+str(involved))
+                allbidder[i] + ',' + allbidder[j] + ',' + str(dist)+','+str(involved))
             bwriter.write('\n')
     bwriter.close()
 
@@ -104,10 +119,10 @@ def similarity():
         else:
             bwriter = open(BINARY_DISTANCE_FILE + '.rolling.' + str(startIndex) + '.csv', 'w')
             bwriter.write('INST1,INST2,cosine\n')
-            for i in range(0, len(allinst) - 1, 1):
-                for j in range(i + 1, len(allinst), 1):
-                    bwriter.write(allinst[i] + ',' + allinst[j] + ',')
-                    dist,involved = cosine(BinaryVectors[allinst[i]][startIndex:startIndex + STEPSIZE],BinaryVectors[allinst[j]][startIndex:startIndex + STEPSIZE])
+            for i in range(0, len(allbidder) - 1, 1):
+                for j in range(i + 1, len(allbidder), 1):
+                    bwriter.write(allbidder[i] + ',' + allbidder[j] + ',')
+                    dist,involved = cosine(BinaryVectors[allbidder[i]][startIndex:startIndex + STEPSIZE],BinaryVectors[allbidder[j]][startIndex:startIndex + STEPSIZE])
                     bwriter.write(str(dist)+','+str(involved))
                     bwriter.write('\n')
             bwriter.close()
@@ -115,22 +130,22 @@ def similarity():
     # Price Option
     log.write('Computing price distances')
     hpwriter = open(HIGH_PRICE_DISTANCE_FILE, 'w')
-    hpwriter.write('INST1,INST2,cosine\n')
+    hpwriter.write('BIDDER1,BIDDER2,cosine\n')
 
     lpwriter = open(LOW_PRICE_DISTANCE_FILE, 'w')
-    lpwriter.write('INST1,INST2,cosine\n')
+    lpwriter.write('BIDDER1,BIDDER2,cosine\n')
 
     HighPriceVectors = dict()
     LowPriceVectors = dict()
 
-    for _ins in allinst:
+    for _bidder in allbidder:
         _high = []
         _low = []
         for _stkid in orderedStkid:
             h = -1.0
             l = 999999999.0
-            if len(allbids[_stkid][_ins]) > 0:
-                for item in allbids[_stkid][_ins]:
+            if len(allbids[_stkid][_bidder]) > 0:
+                for item in allbids[_stkid][_bidder]:
                     if item[1] > h:
                         h = item[1]
                     if item[1] < l:
@@ -141,17 +156,17 @@ def similarity():
                 _high.append(0.0)
                 _low.append(0.0)
 
-        HighPriceVectors[_ins] = _high
-        LowPriceVectors[_ins] = _low
+        HighPriceVectors[_bidder] = _high
+        LowPriceVectors[_bidder] = _low
 
-    for i in range(0, len(allinst) - 1, 1):
-        for j in range(i + 1, len(allinst), 1):
-            dist,involved = cosineOnlyParticipation(HighPriceVectors[allinst[i]], HighPriceVectors[allinst[j]])
-            hpwriter.write(allinst[i] + ',' + allinst[j] + ',' + str(dist)+','+str(involved))
+    for i in range(0, len(allbidder) - 1, 1):
+        for j in range(i + 1, len(allbidder), 1):
+            dist,involved = cosineOnlyParticipation(HighPriceVectors[allbidder[i]], HighPriceVectors[allbidder[j]])
+            hpwriter.write(allbidder[i] + ',' + allbidder[j] + ',' + str(dist)+','+str(involved))
             hpwriter.write('\n')
 
-            dist,involved = cosineOnlyParticipation(LowPriceVectors[allinst[i]], LowPriceVectors[allinst[j]])
-            lpwriter.write(allinst[i] + ',' + allinst[j] + ',' + str(dist)+','+str(involved))
+            dist,involved = cosineOnlyParticipation(LowPriceVectors[allbidder[i]], LowPriceVectors[allbidder[j]])
+            lpwriter.write(allbidder[i] + ',' + allbidder[j] + ',' + str(dist)+','+str(involved))
             lpwriter.write('\n')
     hpwriter.close()
     lpwriter.close()
@@ -163,21 +178,21 @@ def similarity():
             break
         else:
             hpwriter = open(HIGH_PRICE_DISTANCE_FILE + '.rolling.' + str(startIndex) + '.csv', 'w')
-            hpwriter.write('INST1,INST2,cosine\n')
-            for i in range(0, len(allinst) - 1, 1):
-                for j in range(i + 1, len(allinst), 1):
-                    hpwriter.write(allinst[i] + ',' + allinst[j] + ',')
-                    dist,involved = cosineOnlyParticipation(HighPriceVectors[allinst[i]][startIndex:startIndex + STEPSIZE],HighPriceVectors[allinst[j]][startIndex:startIndex + STEPSIZE])
+            hpwriter.write('BIDDER1,BIDDER2,cosine\n')
+            for i in range(0, len(allbidder) - 1, 1):
+                for j in range(i + 1, len(allbidder), 1):
+                    hpwriter.write(allbidder[i] + ',' + allbidder[j] + ',')
+                    dist,involved = cosineOnlyParticipation(HighPriceVectors[allbidder[i]][startIndex:startIndex + STEPSIZE],HighPriceVectors[allbidder[j]][startIndex:startIndex + STEPSIZE])
                     hpwriter.write(str(dist)+','+str(involved))
                     hpwriter.write('\n')
             hpwriter.close()
 
             lpwriter = open(LOW_PRICE_DISTANCE_FILE + '.rolling.' + str(startIndex) + '.csv', 'w')
-            lpwriter.write('INST1,INST2,cosine\n')
-            for i in range(0, len(allinst) - 1, 1):
-                for j in range(i + 1, len(allinst), 1):
-                    lpwriter.write(allinst[i] + ',' + allinst[j] + ',')
-                    dist,involved = cosineOnlyParticipation(LowPriceVectors[allinst[i]][startIndex:startIndex + STEPSIZE],LowPriceVectors[allinst[j]][startIndex:startIndex + STEPSIZE])
+            lpwriter.write('BIDDER1,BIDDER2,cosine\n')
+            for i in range(0, len(allbidder) - 1, 1):
+                for j in range(i + 1, len(allbidder), 1):
+                    lpwriter.write(allbidder[i] + ',' + allbidder[j] + ',')
+                    dist,involved = cosineOnlyParticipation(LowPriceVectors[allbidder[i]][startIndex:startIndex + STEPSIZE],LowPriceVectors[allbidder[j]][startIndex:startIndex + STEPSIZE])
                     lpwriter.write(str(dist)+','+str(involved))
                     lpwriter.write('\n')
             lpwriter.close()
@@ -188,20 +203,24 @@ def similarity():
 #####################################
 
 def cliques():
-    os.system('rm ../data/cliques/*')
+    # os.system('del ../data/cliques/*')
     from networkx.algorithms.clique import find_cliques
     import networkx as nx
 
-    for f in os.listdir('../data/distance'):
+    bidder2stocks = defaultdict(lambda:[])
+    for r in allrecords:
+        bidder2stocks[r.biddercode].append(r.stkcd)
+
+
+    for f in os.listdir(RESULTDIR+'/distance'):
         G = nx.Graph()
         log.write('Computing cliques for Distance File:' + f)
-        fout = open('../data/cliques/' + f + '.cliques.txt', 'w')
-
+        fout = open(RESULTDIR+'/cliques/' + f +'.CLUSTERSIM_CUTOFF_'+str(CLUSTER_SIMILAR_CUTOFF)+'.BINARYSIM_CUTOFF_'+str(BINARY_DISTANCE_CUTOFF)+ '.cliques.txt', 'w')
 
         if 'price' in f:
             accompany_filter  = defaultdict(lambda:-1.0)
             binaryDistanceFile = f.replace('price_high','binary').replace('price_low','binary')
-            for l in open('../data/distance/'+binaryDistanceFile).readlines()[1:]:
+            for l in open(RESULTDIR+'/distance/'+binaryDistanceFile).readlines()[1:]:
                 _inst1,_inst2,_distance,_involved = l.strip().split(',')
                 accompany_filter[(_inst1,_inst2)] = float(_distance)
                 accompany_filter[(_inst2,_inst1)] = float(_distance)
@@ -210,14 +229,14 @@ def cliques():
             accompany_filter  = defaultdict(lambda:1.0)
 
         distance = defaultdict(lambda:'NULL')
-        for l in open('../data/distance/' + f).readlines()[1:]:
+        for l in open(RESULTDIR+'/distance/' + f).readlines()[1:]:
             segs = l.strip().split(',')
             if len(segs) == 4:
                 weight = float(segs[2])
                 if (weight > CLUSTER_SIMILAR_CUTOFF) and (accompany_filter[(segs[0],segs[1])] > BINARY_DISTANCE_CUTOFF):
                     G.add_edge(segs[0], segs[1])
-                    distance[(segs[0],segs[1])] = str(weight)
-                    distance[(segs[1],segs[0])] = str(weight)
+                    distance[(segs[0],segs[1])] = weight
+                    distance[(segs[1],segs[0])] = weight
         fout.write('Distance File: ' + f + '\n')
         fout.write('CLUSTER_SIMILAR_CUTOFF:' + str(CLUSTER_SIMILAR_CUTOFF) + '\n')
         fout.write('BINARY_DISTANCE_CUTOFF:' + str(BINARY_DISTANCE_CUTOFF) + '\n\n')
@@ -226,16 +245,23 @@ def cliques():
 
         _idx = 0
         for item in cqs:
-            _idx += 1
-            fout.write('--------------- CLIQUE ' + str(_idx) + ' with ' + str(len(item)) + ' members-----------\n')
-            fout.write(','.join([str(ins) for ins in item]))
-            fout.write("\nDistance Details:\n")
-            fout.write("INST1,INST2,DISTANCE,CORRESPONDING BINARY DISTANCE\n")
+            # _idx += 1
+            # fout.write('--------------- CLIQUE ' + str(_idx) + ' with ' + str(len(item)) + ' members-----------\n')
+            accompanyList = []
+            participationList = []
+            priceList = []
+
             for i in range(0,len(item)-1,1):
                 for j in range(i+1,len(item),1):
-                    fout.write( item[i]+','+item[j]+','+distance[(item[i],item[j])]+','+str(accompany_filter[(item[i],item[j])])+'\n')
-            fout.write('\n\n--------------------------------------------------\n\n')
+                    priceList.append(distance[(item[i],item[j])])
+                    accompanyList.append(accompany_filter[(item[i],item[j])])
+                    participationList.append(publicElements(bidder2stocks[item[i]],bidder2stocks[item[j]]))
 
+
+            for _lt in [accompanyList,participationList,priceList]:
+                for _func in [max,mean,min]:
+                    fout.write(str(_func(_lt))+',')
+            fout.write(','.join([str(ins) for ins in item])+'\n')
         fout.close()
 
 

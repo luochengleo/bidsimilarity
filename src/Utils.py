@@ -33,6 +33,20 @@ def cosineOnlyParticipation(v1, v2):
     return sumxy / math.sqrt(sumxx * sumyy), involved
 
 
+
+def publicElements(lt1,lt2):
+    x = set()
+    for item in lt1:
+        x.add(item)
+    for item in lt2:
+        x.add(item)
+    return len(lt1)+len(lt2) - len(x)
+
+def mean(lt):
+    sum  = 0.0
+    for item in lt:
+        sum += item
+    return sum/len(lt)
 class Logger:
     def __init__(self, logfile):
         self.writer = open(logfile, 'w')
@@ -43,3 +57,4 @@ class Logger:
 
     def close(self):
         self.writer.close()
+
