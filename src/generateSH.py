@@ -1,11 +1,12 @@
 __author__ = 'luocheng'
 
 idx = 0
-commands = open('batch.sh','w')
+commands = open('batch.bat','w')
 for b in [0.3,0.4,0.5,0.6]:
     for p in [0.980,0.985,0.990,0.995]:
         idx +=1
-        commands.write('nohup python main.py ./config'+str(idx)+' > '+str(idx)+'.log &\n')
+        # commands.write('nohup python main.py ./config'+str(idx)+' > '+str(idx)+'.log &\n')
+        commands.write('start python main.py ./config'+str(idx)+'\n')
         fout=open('config'+str(idx),'w')
         fout.write('datafile=../data/biddata.full.csv\n')
         fout.write('ROLLINGWINDOW = 200\n')
