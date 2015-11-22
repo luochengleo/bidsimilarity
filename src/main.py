@@ -27,6 +27,14 @@ def init_parameters(filename):
             d[k.strip()] = v.strip()
         else:
             print len(segs)
+    global datafile
+    global ROLLINGWINDOW
+    global STEPSIZE
+    global CLUSTER_SIMILAR_CUTOFF
+    global POLICY_CHOICE_OPTION
+    global BINARY_DISTANCE_CUTOFF
+    global RANKINGOPTION
+    global RESULTDIR
     datafile = d['datafile']
     ROLLINGWINDOW = int( d['ROLLINGWINDOW'])
     STEPSIZE = int(d['STEPSIZE'])

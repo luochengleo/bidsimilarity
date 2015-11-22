@@ -15,5 +15,5 @@ for b in [0.3,0.4,0.5,0.6]:
         fout.write('POLICY_CHOICE_OPTION = 0\n')
         fout.write('BINARY_DISTANCE_CUTOFF ='+str(b)+'\n')
         fout.write('RANKINGOPTION =RANKING\n')
-        fout.write('RESULTDIR =../data/output')
+        fout.write('RESULTDIR =../data/output'+str(b)+'_'+str(p))
         fout.close()
