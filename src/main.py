@@ -14,9 +14,11 @@ STEPSIZE = 50
 CLUSTER_SIMILAR_CUTOFF = 0.980
 POLICY_CHOICE_OPTION = 0
 BINARY_DISTANCE_CUTOFF = 0.6
-
+CALCULATE_SIMILARITY = 1
+CALCULATE_CLIQUES = 1
 RANKINGOPTION = 'RANKING'
-RESULTDIR = '../data/output'
+RESULT_DIR = '../output/output'
+DISTANCE_DIR = '../none'
 
 def init_parameters(filename):
     d = {}
@@ -34,7 +36,10 @@ def init_parameters(filename):
     global POLICY_CHOICE_OPTION
     global BINARY_DISTANCE_CUTOFF
     global RANKINGOPTION
-    global RESULTDIR
+    global RESULT_DIR
+    global CALCULATE_SIMILARITY
+    global CALCULATE_CLIQUES
+    global DISTANCE_DIR
     datafile = d['datafile']
     ROLLINGWINDOW = int( d['ROLLINGWINDOW'])
     STEPSIZE = int(d['STEPSIZE'])
@@ -42,7 +47,10 @@ def init_parameters(filename):
     POLICY_CHOICE_OPTION = int(d['POLICY_CHOICE_OPTION'])
     BINARY_DISTANCE_CUTOFF = float(d['BINARY_DISTANCE_CUTOFF'])
     RANKINGOPTION = d['RANKINGOPTION']
-    RESULTDIR = d['RESULTDIR']
+    RESULT_DIR = d['RESULT_DIR']
+    CALCULATE_SIMILARITY  = int(d['CALCULATE_SIMILARITY'])
+    CALCULATE_CLIQUES = int(d['CALCULATE_CLIQUES'])
+    DISTANCE_DIR = d['DISTANCE_DIR']
 
 ##### load parameters ########
 
@@ -52,17 +60,17 @@ init_parameters(sys.argv[1])
 
 
 try:
-    os.mkdir(RESULTDIR)
-    os.mkdir(RESULTDIR+'/distance')
-    os.mkdir(RESULTDIR+'/cliques')
+    os.mkdir(RESULT_DIR)
+    os.mkdir(RESULT_DIR+'/distance')
+    os.mkdir(RESULT_DIR+'/cliques')
 except:
     print 'RESULT DIR EXISTS'
 
-logfile = RESULTDIR+'/log.txt'
+logfile = RESULT_DIR+'/log.txt'
 log = Logger(logfile)
-BINARY_DISTANCE_FILE = RESULTDIR+'/distance/binary_policy_' + str(POLICY_CHOICE_OPTION) + '.csv'
-HIGH_PRICE_DISTANCE_FILE = RESULTDIR+'/distance/price_high_policy_' + str(POLICY_CHOICE_OPTION) + '.csv'
-LOW_PRICE_DISTANCE_FILE = RESULTDIR+'/distance/price_low_policy_' + str(POLICY_CHOICE_OPTION) + '.csv'
+BINARY_DISTANCE_FILE = RESULT_DIR+'/distance/binary_policy_' + str(POLICY_CHOICE_OPTION) + '.csv'
+HIGH_PRICE_DISTANCE_FILE = RESULT_DIR+'/distance/price_high_policy_' + str(POLICY_CHOICE_OPTION) + '.csv'
+LOW_PRICE_DISTANCE_FILE = RESULT_DIR+'/distance/price_low_policy_' + str(POLICY_CHOICE_OPTION) + '.csv'
 
 #####   initial datapath ends  ############
 
@@ -132,7 +140,7 @@ def similarity():
 
     log.write('Binary distances calculate')
     for i in range(0, len(allbidder) - 1, 1):
-        log.write('Binary distances calculate: processing ' + str(i) + ' / ' + str(len(allbidder)))
+        # log.write('Binary distances calculate: processing ' + str(i) + ' / ' + str(len(allbidder)))
 
         for j in range(i + 1, len(allbidder), 1):
             dist,involved = cosine(BinaryVectors[allbidder[i]], BinaryVectors[allbidder[j]])
@@ -242,16 +250,19 @@ def cliques():
     for r in allrecords:
         bidder2stocks[r.biddercode].append(r.stkcd)
 
-
-    for f in os.listdir(RESULTDIR+'/distance'):
+    if CALCULATE_SIMILARITY==1:
+        _distancedir = RESULT_DIR+'/distance'
+    else:
+        _distancedir = DISTANCE_DIR
+    for f in os.listdir(_distancedir):
         G = nx.Graph()
         log.write('Computing cliques for Distance File:' + f)
-        fout = open(RESULTDIR+'/cliques/' + f +'.CLUSTERSIM_CUTOFF_'+str(CLUSTER_SIMILAR_CUTOFF)+'.BINARYSIM_CUTOFF_'+str(BINARY_DISTANCE_CUTOFF)+ '.cliques.txt', 'w')
+        fout = open(RESULT_DIR+'/cliques/' + f +'.CLUSTERSIM_CUTOFF_'+str(CLUSTER_SIMILAR_CUTOFF)+'.BINARYSIM_CUTOFF_'+str(BINARY_DISTANCE_CUTOFF)+ '.cliques.txt', 'w')
 
         if 'price' in f:
             accompany_filter  = defaultdict(lambda:-1.0)
             binaryDistanceFile = f.replace('price_high','binary').replace('price_low','binary')
-            for l in open(RESULTDIR+'/distance/'+binaryDistanceFile).readlines()[1:]:
+            for l in open(_distancedir+'/'+binaryDistanceFile).readlines()[1:]:
                 _inst1,_inst2,_distance,_involved = l.strip().split(',')
                 accompany_filter[(_inst1,_inst2)] = float(_distance)
                 accompany_filter[(_inst2,_inst1)] = float(_distance)
@@ -260,7 +271,7 @@ def cliques():
             accompany_filter  = defaultdict(lambda:1.0)
 
         distance = defaultdict(lambda:'NULL')
-        for l in open(RESULTDIR+'/distance/' + f).readlines()[1:]:
+        for l in open(_distancedir+'/' + f).readlines()[1:]:
             segs = l.strip().split(',')
             if len(segs) == 4:
                 weight = float(segs[2])
@@ -296,5 +307,15 @@ def cliques():
         fout.close()
 
 
-similarity()
-cliques()
+if CALCULATE_SIMILARITY ==1:
+    similarity()
+else:
+    log.write('CACULATION SIMILARITY SKIPPED')
+if CALCULATE_CLIQUES ==1:
+    cliques()
+else:
+    log.write('CACULATION CLIQUES SKIPPED')
+
+successfile = RESULT_DIR+'/success.txt'
+suc = Logger(successfile)
+suc.write('Calculation finished')
