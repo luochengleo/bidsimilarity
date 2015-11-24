@@ -283,6 +283,7 @@ def cliques():
         fout.write('CLUSTER_SIMILAR_CUTOFF:' + str(CLUSTER_SIMILAR_CUTOFF) + '\n')
         fout.write('BINARY_DISTANCE_CUTOFF:' + str(BINARY_DISTANCE_CUTOFF) + '\n\n')
 
+        fout.write(open('../data/clique_output.csv').readline().strip()+'\n')
         cqs = find_cliques(G)
 
         _idx = 0
@@ -301,7 +302,7 @@ def cliques():
 
 
             for _lt in [accompanyList,participationList,priceList]:
-                for _func in [max,mean,min]:
+                for _func in [min,max,mean]:
                     fout.write(str(_func(_lt))+',')
             fout.write(','.join([str(ins) for ins in item])+'\n')
         fout.close()
