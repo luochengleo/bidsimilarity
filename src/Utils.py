@@ -5,15 +5,18 @@ import math
 def cosine(v1, v2):
     "compute cosine similarity of v1 to v2: (v1 dot v2)/{||v1||*||v2||)"
     sumxx, sumxy, sumyy = 0.0, 0.0, 0.0
+    shareParticipation = 0
     for i in range(len(v1)):
         x = v1[i]
         y = v2[i]
+        if x * y != 0:
+            shareParticipation +=1
         sumxx += x * x
         sumyy += y * y
         sumxy += x * y
     if sumxx * sumyy == 0.0:
         return 0.0,0
-    return sumxy / math.sqrt(sumxx * sumyy), len(v1)
+    return sumxy / math.sqrt(sumxx * sumyy), shareParticipation
 
 
 def cosineOnlyParticipation(v1, v2):

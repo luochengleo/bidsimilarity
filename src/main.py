@@ -257,7 +257,7 @@ def cliques():
     for f in os.listdir(_distancedir):
         G = nx.Graph()
         log.write('Computing cliques for Distance File:' + f)
-        fout = open(RESULT_DIR+'/cliques/' + f +'.CLUSTERSIM_CUTOFF_'+str(CLUSTER_SIMILAR_CUTOFF)+'.BINARYSIM_CUTOFF_'+str(BINARY_DISTANCE_CUTOFF)+ '.cliques.txt', 'w')
+        fout = open(RESULT_DIR+'/cliques/' + f +'.CLUSTERSIM_CUTOFF_'+str(CLUSTER_SIMILAR_CUTOFF)+'.BINARYSIM_CUTOFF_'+str(BINARY_DISTANCE_CUTOFF)+ '.cliques.csv', 'w')
 
         if 'price' in f:
             accompany_filter  = defaultdict(lambda:-1.0)
@@ -271,14 +271,19 @@ def cliques():
             accompany_filter  = defaultdict(lambda:1.0)
 
         distance = defaultdict(lambda:'NULL')
+        sharedBids = defaultdict(lambda:'NULL')
+
         for l in open(_distancedir+'/' + f).readlines()[1:]:
             segs = l.strip().split(',')
             if len(segs) == 4:
                 weight = float(segs[2])
+                _sbids = int(segs[3])
                 if (weight > CLUSTER_SIMILAR_CUTOFF) and (accompany_filter[(segs[0],segs[1])] > BINARY_DISTANCE_CUTOFF):
                     G.add_edge(segs[0], segs[1])
                     distance[(segs[0],segs[1])] = weight
                     distance[(segs[1],segs[0])] = weight
+                    sharedBids[(segs[0],segs[1])] = _sbids
+                    sharedBids[(segs[1],segs[0])] = _sbids
         fout.write('Distance File: ' + f + '\n')
         fout.write('CLUSTER_SIMILAR_CUTOFF:' + str(CLUSTER_SIMILAR_CUTOFF) + '\n')
         fout.write('BINARY_DISTANCE_CUTOFF:' + str(BINARY_DISTANCE_CUTOFF) + '\n\n')
@@ -298,8 +303,7 @@ def cliques():
                 for j in range(i+1,len(item),1):
                     priceList.append(distance[(item[i],item[j])])
                     accompanyList.append(accompany_filter[(item[i],item[j])])
-                    participationList.append(publicElements(bidder2stocks[item[i]],bidder2stocks[item[j]]))
-
+                    participationList.append(sharedBids[(item[i],item[j])])
 
             for _lt in [accompanyList,participationList,priceList]:
                 for _func in [min,max,mean]:
