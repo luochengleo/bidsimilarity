@@ -15,6 +15,7 @@
     CALCULATE_SIMILARITY=1
     CALCULATE_CLIQUES=1
     DISTANCE_DIR=../output
+    CALCULATE =
 
 =========  Sample Ends   =================
 

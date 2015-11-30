@@ -20,6 +20,10 @@ RANKINGOPTION = 'RANKING'
 RESULT_DIR = '../output/output'
 DISTANCE_DIR = '../none'
 
+
+
+
+
 def init_parameters(filename):
     d = {}
     for l in open(filename).readlines():
